@@ -54,21 +54,20 @@ public class SchoolContext : DbContext
 
 ---
 
-## 🏷 Model Configuration: Data Annotations
+3. 📌 Data Annotations
+Data Annotations are attributes applied to model classes to configure database mappings.
 
-Use attributes to configure model behavior.
-
-| Attribute       | Purpose                          | Example                                               |
-|----------------|----------------------------------|-------------------------------------------------------|
-| `[Key]`         | Marks property as Primary Key    | `[Key] public int Id { get; set; }`                   |
-| `[Required]`    | Field must not be null           | `[Required] public string Name { get; set; }`         |
-| `[MaxLength]`   | Sets max string length           | `[MaxLength(50)] public string Title { get; set; }`   |
-| `[ForeignKey]`  | Foreign key relationship         | `[ForeignKey("StudentId")] public Student Student`    |
-| `[NotMapped]`   | Exclude property from DB         | `[NotMapped] public string FullName { get; set; }`    |
-
-### Example
-
-```csharp
+Common Data Annotations
+Attribute	Purpose	Example
+[Key]	Marks a property as Primary Key	[Key] public int Id { get; set; }
+[Required]	Ensures the field is not null	[Required] public string Name { get; set; }
+[MaxLength]	Sets maximum string length	[MaxLength(50)] public string Title { get; set; }
+[ForeignKey]	Defines a foreign key relationship	[ForeignKey("StudentId")] public Student Student { get; set; }
+[NotMapped]	Excludes a property from DB mapping	[NotMapped] public string FullName { get; set; }
+📦 Example
+csharp
+Copy
+Edit
 public class Student
 {
     [Key]
@@ -81,57 +80,102 @@ public class Student
     [NotMapped]
     public string DisplayName => $"Student: {Name}";
 }
-```
 
----
-
-## ⚙️ Model Configuration: Fluent API
-
-Advanced configuration using `OnModelCreating`.
-
-```csharp
-protected override void OnModelCreating(ModelBuilder modelBuilder)
+public class Course
 {
-    modelBuilder.Entity<Student>()
-        .HasKey(s => s.StudentId);
+    [Key]
+    public int CourseId { get; set; }
 
-    modelBuilder.Entity<Student>()
-        .Property(s => s.Name)
-        .IsRequired()
-        .HasMaxLength(100);
+    [Required]
+    public string Title { get; set; }
 
-    modelBuilder.Entity<Course>()
-        .HasOne(c => c.Student)
-        .WithMany()
-        .HasForeignKey(c => c.StudentId);
+    [ForeignKey("Student")]
+    public int StudentId { get; set; }
+
+    public Student Student { get; set; }
 }
-```
+✅ StudentId is the Primary Key.
+✅ Name is required and has a max length of 100.
+✅ DisplayName is not mapped to the database.
+✅ Course has a foreign key relationship with Student.
 
----
+4. ⚙️ Fluent API (Advanced Configuration)
+Fluent API provides more control over database mappings than Data Annotations.
 
-## 📦 Database Migrations
+Common Fluent API Configurations
+Method	Purpose	Example
+.HasKey()	Sets Primary Key	modelBuilder.Entity<Student>().HasKey(s => s.StudentId);
+.Property()	Configures a property	modelBuilder.Entity<Student>().Property(s => s.Name).IsRequired().HasMaxLength(100);
+.HasRequired()	Defines a required relationship	modelBuilder.Entity<Course>().HasRequired(c => c.Student).WithMany().HasForeignKey(c => c.StudentId);
+.Ignore()	Excludes a property	modelBuilder.Entity<Student>().Ignore(s => s.DisplayName);
+📦 Example
+csharp
+Copy
+Edit
+public class SchoolContext : DbContext
+{
+    public DbSet<Student> Students { get; set; }
+    public DbSet<Course> Courses { get; set; }
 
-### Common Commands (PMC)
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        // Configure Student
+        modelBuilder.Entity<Student>()
+            .HasKey(s => s.StudentId);
 
-| Command                               | Purpose                                |
-|--------------------------------------|----------------------------------------|
-| `Enable-Migrations`                  | Enables migrations (run once)          |
-| `Add-Migration <Name>`               | Creates migration class                |
-| `Update-Database`                    | Applies latest migration               |
-| `Update-Database -TargetMigration:X` | Rollback to specific migration         |
+        modelBuilder.Entity<Student>()
+            .Property(s => s.Name)
+            .IsRequired()
+            .HasMaxLength(100);
 
-### Example
+        // Configure Course
+        modelBuilder.Entity<Course>()
+            .HasKey(c => c.CourseId);
 
-```bash
+        modelBuilder.Entity<Course>()
+            .HasOne(c => c.Student)
+            .WithMany()
+            .HasForeignKey(c => c.StudentId);
+    }
+}
+5. 🛠️ Migrations
+Migrations allow incremental updates to the database schema.
+
+📋 Commands (Package Manager Console)
+Command	Purpose
+Enable-Migrations	Enables migrations (only once)
+Add-Migration <Name>	Creates a new migration
+Update-Database	Applies pending migrations
+Update-Database -TargetMigration:<Name>	Rolls back to a specific migration
+🔁 Example Workflow
+Enable Migrations:
+
+bash
+Copy
+Edit
 Enable-Migrations
+Add a Migration:
+
+bash
+Copy
+Edit
 Add-Migration InitialCreate
+Update Database:
+
+bash
+Copy
+Edit
 Update-Database
+Rollback Migration:
+
+bash
+Copy
+Edit
 Update-Database -TargetMigration:"PreviousMigrationName"
-```
-
-### Migration File
-
-```csharp
+📦 Migration File Example
+csharp
+Copy
+Edit
 public partial class InitialCreate : DbMigration
 {
     public override void Up()
@@ -151,15 +195,22 @@ public partial class InitialCreate : DbMigration
         DropTable("dbo.Students");
     }
 }
-```
+6. 🔗 Relationships in EF Code First
+EF supports the following relationships:
 
----
+One-to-Many (1:N)
 
-## 🔗 Model Relationships
+Many-to-Many (M:N)
 
-### One-to-Many (1:N)
+One-to-One (1:1)
 
-```csharp
+(1) One-to-Many (1:N)
+A Student can have multiple Courses.
+
+📌 Data Annotations
+csharp
+Copy
+Edit
 public class Student
 {
     public int StudentId { get; set; }
@@ -174,11 +225,21 @@ public class Course
     public int StudentId { get; set; }
     public Student Student { get; set; }
 }
-```
+🔧 Fluent API
+csharp
+Copy
+Edit
+modelBuilder.Entity<Course>()
+    .HasOne(c => c.Student)
+    .WithMany(s => s.Courses)
+    .HasForeignKey(c => c.StudentId);
+(2) Many-to-Many (M:N)
+A Student can enroll in multiple Courses, and a Course can have multiple Students.
 
-### Many-to-Many (M:N)
-
-```csharp
+📌 Data Annotations
+csharp
+Copy
+Edit
 public class Student
 {
     public int StudentId { get; set; }
@@ -186,19 +247,43 @@ public class Student
     public ICollection<StudentCourse> StudentCourses { get; set; }
 }
 
+public class Course
+{
+    public int CourseId { get; set; }
+    public string Title { get; set; }
+    public ICollection<StudentCourse> StudentCourses { get; set; }
+}
+
 public class StudentCourse
 {
     public int StudentId { get; set; }
     public Student Student { get; set; }
-
     public int CourseId { get; set; }
     public Course Course { get; set; }
 }
-```
+🔧 Fluent API
+csharp
+Copy
+Edit
+modelBuilder.Entity<StudentCourse>()
+    .HasKey(sc => new { sc.StudentId, sc.CourseId });
 
-### One-to-One (1:1)
+modelBuilder.Entity<StudentCourse>()
+    .HasOne(sc => sc.Student)
+    .WithMany(s => s.StudentCourses)
+    .HasForeignKey(sc => sc.StudentId);
 
-```csharp
+modelBuilder.Entity<StudentCourse>()
+    .HasOne(sc => sc.Course)
+    .WithMany(c => c.StudentCourses)
+    .HasForeignKey(sc => sc.CourseId);
+(3) One-to-One (1:1)
+A Student has one StudentProfile.
+
+📌 Data Annotations
+csharp
+Copy
+Edit
 public class Student
 {
     public int StudentId { get; set; }
@@ -210,17 +295,23 @@ public class StudentProfile
 {
     public int StudentProfileId { get; set; }
     public string Address { get; set; }
-
     public int StudentId { get; set; }
     public Student Student { get; set; }
 }
-```
+🔧 Fluent API
+csharp
+Copy
+Edit
+modelBuilder.Entity<Student>()
+    .HasOne(s => s.Profile)
+    .WithOne(p => p.Student)
+    .HasForeignKey<StudentProfile>(p => p.StudentId);
+7. 🌱 Seeding Data
+Use Seed() method to pre-populate your DB.
 
----
-
-## 🌱 Seeding Initial Data
-
-```csharp
+csharp
+Copy
+Edit
 protected override void Seed(SchoolContext context)
 {
     context.Students.AddOrUpdate(
@@ -231,31 +322,24 @@ protected override void Seed(SchoolContext context)
 
     context.SaveChanges();
 }
-```
+✅ Runs when Update-Database is executed.
 
----
+8. ✅ Best Practices
+✅ Use Fluent API for complex configurations.
 
-## ✅ Best Practices
+✅ Keep DbContext short-lived (per request).
 
-- ✅ Use Fluent API for complex mappings.
-- ✅ Create a new `DbContext` per request in web apps.
-- ✅ Use `Add-Migration` after each model update.
-- ✅ Avoid `AutomaticMigrationsEnabled = true` in production.
-- ✅ Use `.AsNoTracking()` for read-only queries.
+✅ Run Add-Migration after model changes.
 
----
+❌ Avoid AutomaticMigrations in production.
 
-## 📝 Summary
+✅ Use .AsNoTracking() for read-only queries.
 
-| Topic              | Key Takeaway                                 |
-|--------------------|-----------------------------------------------|
-| Code First         | Define DB schema using C# classes             |
-| Data Annotations   | Quick and easy model configuration            |
-| Fluent API         | Precise, advanced control of mappings         |
-| Migrations         | Version-controlled schema updates             |
-| Relationships      | 1:N, M:N, 1:1 relationship support             |
-| Seeding Data       | Populate DB with initial sample data          |
-
----
-
-> 🔗 Feel free to fork, star, and contribute to this repo. Happy coding with Entity Framework! 🚀
+🧾 Final Summary
+Topic	Key Takeaway
+Code First	Define DB schema using C# classes.
+Data Annotations	Simple attributes for model configuration.
+Fluent API	Advanced configuration for complex mappings.
+Migrations	Incrementally update the database schema.
+Relationships	Define 1:N, M:N, and 1:1 relationships.
+Seeding Data	Pre-populate the database with initial data.
